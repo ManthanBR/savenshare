@@ -1,4 +1,4 @@
-// sns_custom.js (Modified with FFmpeg.wasm)
+// sns_custom.js (Corrected)
 
 let unityReady = false;
 let startARButtonListenerAdded = false;
@@ -15,15 +15,21 @@ console.log("sns_custom.js: Script start");
 async function loadFFmpeg() {
     if (ffmpegReady) return;
 
-     ffmpeg = FFmpeg.createFFmpeg({ log: true, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
+    // Use createFFmpeg (lowercase 'c') from the FFmpeg object
+    if (typeof FFmpeg === 'undefined' || typeof FFmpeg.createFFmpeg === 'undefined') {
+      console.error("FFmpeg library is not loaded correctly. Check script tags.");
+       ShowError("FFmpeg library is not loaded. Check index.html");
+      return;
+    }
+    ffmpeg = FFmpeg.createFFmpeg({ log: true, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
+
     try {
         await ffmpeg.load();
         ffmpegReady = true;
         console.log("FFmpeg loaded successfully");
     } catch (err) {
         console.error("Failed to load FFmpeg:", err);
-         ShowError("Failed to load FFmpeg: " + err.message);
-
+        ShowError("Failed to load FFmpeg: " + err.message);
     }
 }
 
@@ -33,13 +39,14 @@ function setupEventListeners() {
     const recordButton = document.getElementById('recordButton');
     const saveVideoButton = document.getElementById('saveVideoButton'); // Get the save button
     const shareVideoButton = document.getElementById('shareVideoButton'); // Get the share button
+
     if (recordButton) {
         recordButton.addEventListener('click', toggleRecording);
     } else {
         console.error("recordButton not found!");
     }
 
-       if (saveVideoButton) {
+    if (saveVideoButton) {
         saveVideoButton.addEventListener('click', downloadVideo); // Attach to the button
     } else {
         console.error("saveVideoButton not found!");
@@ -51,6 +58,7 @@ function setupEventListeners() {
         console.error("shareVideoButton not found!");
     }
 }
+
 function toggleRecording() {
     if (!recording) {
         startRecording();
@@ -60,7 +68,7 @@ function toggleRecording() {
 }
 
 window.addEventListener("load", function () {
-   console.log("sns_custom.js: Page loaded! Initializing");
+     console.log("sns_custom.js: Page loaded! Initializing");
 
     // Hide the button first
     const recordButtonContainer = document.getElementById('cameraButtonContainer');
@@ -89,9 +97,8 @@ window.addEventListener("load", function () {
     else {
         console.error("Could not find recordButtonContainer to set the visibility")
     }
-    loadFFmpeg(); // Load FFmpeg on page load
-    setupEventListeners();
 
+    setupEventListeners();
 
     if (document.getElementById("startARButton") != null && !startARButtonListenerAdded) {
         startARButtonListenerAdded = true;
@@ -105,10 +112,11 @@ window.addEventListener("load", function () {
             }
         });
     }
+      loadFFmpeg(); //Load ffmpeg after everything is set up
 });
 
 function resetProgress() {
-    console.log("Video recording complete! resetting progress bar");
+     console.log("Video recording complete! resetting progress bar");
     const circle = document.querySelector('.progress-ring__bar');
     if (circle) {
         circle.style.strokeDashoffset = circle.getAttribute('r') * 2 * Math.PI;
@@ -120,7 +128,7 @@ function resetProgress() {
 function startRecording() {
     recording = true;
     startTime = Date.now();
-     const recordButton = document.getElementById('recordButton');
+      const recordButton = document.getElementById('recordButton');
     if (recordButton) {
         recordButton.classList.add('recording');
     } else {
@@ -135,24 +143,22 @@ function startRecording() {
 	else {
 		console.error("Could not find the Unity Instance to send 'OnStartRecording' message");
 	}
-
       // Set a timer to stop recording automatically after maxRecordingTime seconds
     setTimeout(() => {
-        if(recording){
+         if(recording){
                 stopRecording();
-        }
+         }
     }, maxRecordingTime * 1000);
 }
 
 function stopRecording() {
-	recording = false;
+    recording = false;
 	const recordButton = document.getElementById('recordButton');
     if (recordButton) {
         recordButton.classList.remove('recording');
     } else {
         console.error("Could not find the recordButton to remove the recording style");
     }
-
     const circle = document.querySelector('.progress-ring__bar');
     if (circle) {
         circle.style.strokeDashoffset = circle.getAttribute('r') * 2 * Math.PI;
@@ -170,7 +176,7 @@ function stopRecording() {
 }
 
 function updateProgress() {
-     if (!recording) return;
+    if (!recording) return;
     const currentTime = Date.now();
     const elapsedTime = (currentTime - startTime) / 1000;
     const percentage = elapsedTime / maxRecordingTime;
@@ -180,7 +186,7 @@ function updateProgress() {
     } else {
         const circle = document.querySelector('.progress-ring__bar');
         if (circle) {
-            const circumference = circle.getAttribute('r') * 2 * Math.PI;
+             const circumference = circle.getAttribute('r') * 2 * Math.PI;
             const offset = circumference * (1 - percentage);
             circle.style.strokeDashoffset = offset;
             requestAnimationFrame(updateProgress); // Keep updating
@@ -189,7 +195,6 @@ function updateProgress() {
         }
     }
 }
-
 
 // This function receives the data URL from Unity
 async function OnVideoDataURLReceived(dataURL) {
@@ -212,25 +217,23 @@ async function OnVideoDataURLReceived(dataURL) {
     ffmpeg.FS('writeFile', 'input.webm', uint8Array); // Or .mp4, depending on original recording
 
     // 3. Run FFmpeg command (example: re-encode to H.264 MP4)
-    //    This command is CRUCIAL.  Adjust as needed.
     try {
         await ffmpeg.run(
-            '-i', 'input.webm',  // Input file
-            '-c:v', 'libx264',   // Video codec: H.264
-            '-preset', 'fast',    // Encoding speed (faster = lower quality)
-            '-crf', '23',        // Constant Rate Factor (quality, 18-28 is a good range)
-            '-c:a', 'aac',       // Audio codec: AAC
-            '-b:a', '128k',      // Audio bitrate
-            '-movflags', 'faststart', // Enable fast streaming
-            'output.mp4'        // Output file
+            '-i', 'input.webm',
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '23',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-movflags', 'faststart',
+            'output.mp4'
         );
         console.log("FFmpeg processing complete");
-    } catch (error){
-         console.error("FFmpeg processing error:", error);
-         ShowError("FFmpeg processing error: " + error.message);
+    } catch (error) {
+        console.error("FFmpeg processing error:", error);
+        ShowError("FFmpeg processing error: " + error.message);
         return;
     }
-
 
     // 4. Read the output file
     const outputData = ffmpeg.FS('readFile', 'output.mp4');
@@ -239,11 +242,12 @@ async function OnVideoDataURLReceived(dataURL) {
     const outputBlob = new Blob([outputData.buffer], { type: 'video/mp4' });
 
     // 6. Create a URL for the Blob
-     videoDataURL = URL.createObjectURL(outputBlob);
+    videoDataURL = URL.createObjectURL(outputBlob);
 
     // 7. Show the preview
     ShowVideoPreview(videoDataURL);
 }
+
 
 // --- Download and Share Logic (JavaScript) ---
 
@@ -267,14 +271,10 @@ function downloadVideo() {
 
 // Function to share the video (triggered by the share button)
 async function shareVideo() {
-   if (!videoDataURL) {
+    if (!videoDataURL) {
         console.error("No video data URL available for sharing.");
         return;
     }
-    // Revoke the previous object URL if it exists to free resources
-    // if (videoDataURL) {
-    //     URL.revokeObjectURL(videoDataURL);
-    // }
 
     try {
         const response = await fetch(videoDataURL);
@@ -291,31 +291,25 @@ async function shareVideo() {
             console.log("Shared successfully via Web Share API.");
         } else {
             console.warn("Web Share API is not fully supported or file sharing is not allowed. Falling back to download.");
-            alert("Sharing is not supported on this browser. Please download the video instead.");
-            // Optionally trigger the download function as a fallback
+            ShowError("Sharing is not supported on this browser. Please download the video instead.");
             downloadVideo();
         }
     } catch (error) {
         console.error("Error during share operation:", error);
-         ShowError("Failed to share: " + error.message);
+        ShowError("Failed to share: " + error.message);
     }
 }
-
  function ShowVideoPreview(videoURL) {
-    var videoPreviewDiv = document.getElementById('videoPreviewDiv');
+      var videoPreviewDiv = document.getElementById('videoPreviewDiv');
     document.getElementById('cameraButtonContainer').style.display = "none";
     videoPreviewDiv.style.opacity = 1;
     videoPreviewDiv.style.visibility = 'visible';
 
-
     const video = document.getElementById('videoPreview');
     video.src = videoURL;
-
-    video.style.width = "80vw";
+     video.style.width = "80vw";
     video.style.height = 80 / window.innerWidth * window.innerHeight + "vw";
-      video.onloadedmetadata = function() {
+     video.onloadedmetadata = function() {
         URL.revokeObjectURL(this.src); // Revoke URL after metadata is loaded if the blob is local
     };
-
-     console.log("video.src: " + video.src);
 }
