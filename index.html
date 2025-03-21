@@ -47,6 +47,9 @@
       <br><br><br>
     </div>
     <div id="cameraButtonContainer" style="display:none">
+      <div id="tap-container">
+        <img src="tap.png" alt="Tap">
+    </div>
       <button id="recordButton" aria-label="Record"  >
          <div class="progress-ring">
             <svg class="progress-ring__circle" width="80" height="80" viewBox="0 0 80 80">
@@ -120,10 +123,12 @@
     <div id="unity-container">
       <canvas id="unity-canvas" width=320 height=512 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
         <div id="unity-progress-bar-empty">
           <div id="unity-progress-bar-full"></div>
         </div>
+        <div id="logo-container">
+          <img src="weworklogo.png" alt="Logo">
+      </div>
         <div id="madeby-container">
           <img src="madeby.png" alt="Made By">
       </div>
@@ -458,9 +463,12 @@
       }
       function HideVideoPreview(){
         var videoPreviewDiv = document.getElementById('videoPreviewDiv');
+        var tapcontainer = document.getElementById('tap-container');
+        window.unityInstance.SendMessage('ARCamera', 'OnPreviewClosed');
            videoPreviewDiv.style.opacity = 0;
            setTimeout(()=>{
               videoPreviewDiv.style.visibility = 'hidden';
+              tapcontainer.style.opacity = 1;
               document.getElementById('cameraButtonContainer').style.display = "block";
             }, 500);
       }

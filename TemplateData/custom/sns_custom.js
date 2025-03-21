@@ -85,9 +85,11 @@ function resetProgress() {
 function startRecording() {
     recording = true;
     startTime = Date.now();
+    var tapcontainer = document.getElementById('tap-container');
     const recordButton = document.getElementById('recordButton');
     if (recordButton) {
         recordButton.classList.add('recording');
+        tapcontainer.style.opacity = 0;
     } else {
         console.error("Could not find the recordButton to set the recording style");
     }
