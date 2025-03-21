@@ -130,7 +130,19 @@
       <div id="unity-warning"> </div>
 </div>
     <!-- FFmpeg.wasm scripts - MUST be before other scripts that use them -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script>
+        var FFmpeg = undefined; // Declare in outer scope
+    </script>
+   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script>
+        // Wrap the FFmpeg object to ensure global scope
+        if (typeof FFmpeg !== 'undefined') {
+            window.FFmpeg = FFmpeg;
+            console.log("FFmpeg assigned to window.FFmpeg");
+        } else {
+            console.error("FFmpeg is still undefined after loading script!");
+        }
+    </script>
     <script src="https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js"></script>
     <script src="arcamera.js" type="text/javascript"></script>
     <script src="itracker.js" type="text/javascript"></script>

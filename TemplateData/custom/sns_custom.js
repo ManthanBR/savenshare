@@ -1,4 +1,4 @@
-// sns_custom.js (Corrected with FFmpeg.wasm)
+// sns_custom.js (Corrected with FFmpeg.wasm and Global Scope Fix)
 
 let unityReady = false;
 let startARButtonListenerAdded = false;
@@ -6,22 +6,24 @@ let recording = false;
 let startTime;
 const maxRecordingTime = 59;
 let videoDataURL = null;
-let ffmpeg = null; // FFmpeg instance
+// let ffmpeg = null; // No longer needed at top-level
 let ffmpegReady = false;
 
 console.log("sns_custom.js: Script start");
 
-// Load FFmpeg.wasm (using CDN in this example)
+// Load FFmpeg.wasm
 async function loadFFmpeg() {
     if (ffmpegReady) return;
 
-    // Use createFFmpeg (lowercase 'c') from the FFmpeg object
-    if (typeof FFmpeg === 'undefined' || typeof FFmpeg.createFFmpeg === 'undefined') {
-      console.error("FFmpeg library is not loaded correctly. Check script tags.");
-       ShowError("FFmpeg library is not loaded. Check index.html");
-      return;
+    // Check if window.FFmpeg is available (set in index.html)
+    if (typeof window.FFmpeg === 'undefined' || typeof window.FFmpeg.createFFmpeg === 'undefined') {
+        console.error("FFmpeg library is not loaded correctly. Check script tags in index.html.");
+        ShowError("FFmpeg library is not loaded. Check index.html");
+        return;
     }
-    ffmpeg = FFmpeg.createFFmpeg({ log: true, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
+
+    // Use window.FFmpeg.createFFmpeg
+    let ffmpeg = window.FFmpeg.createFFmpeg({ log: true, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
 
     try {
         await ffmpeg.load();
@@ -68,7 +70,7 @@ function toggleRecording() {
 }
 
 window.addEventListener("load", function () {
-     console.log("sns_custom.js: Page loaded! Initializing");
+    console.log("sns_custom.js: Page loaded! Initializing");
 
     const recordButtonContainer = document.getElementById('cameraButtonContainer');
     if (recordButtonContainer) {
@@ -91,9 +93,8 @@ window.addEventListener("load", function () {
                 }
             }
         }, 100);
-    }
-    else {
-        console.error("Could not find recordButtonContainer to set the visibility")
+    } else {
+        console.error("Could not find recordButtonContainer to set the visibility");
     }
 
     setupEventListeners();
@@ -110,23 +111,24 @@ window.addEventListener("load", function () {
             }
         });
     }
-      loadFFmpeg(); //Load ffmpeg after everything is set up
+
+    loadFFmpeg(); // Load FFmpeg after everything is set up
 });
 
 function resetProgress() {
-     console.log("Video recording complete! resetting progress bar");
+    console.log("Video recording complete! Resetting progress bar");
     const circle = document.querySelector('.progress-ring__bar');
     if (circle) {
         circle.style.strokeDashoffset = circle.getAttribute('r') * 2 * Math.PI;
     } else {
-        console.error("Could not find the progress-ring__bar to reset the offset")
+        console.error("Could not find the progress-ring__bar to reset the offset");
     }
 }
 
 function startRecording() {
     recording = true;
     startTime = Date.now();
-      const recordButton = document.getElementById('recordButton');
+    const recordButton = document.getElementById('recordButton');
     if (recordButton) {
         recordButton.classList.add('recording');
     } else {
@@ -135,22 +137,22 @@ function startRecording() {
     updateProgress();
 
     if (window.unityInstance) {
-		window.unityInstance.SendMessage('ARCamera', 'OnStartRecording');
+        window.unityInstance.SendMessage('ARCamera', 'OnStartRecording');
         console.log("Sent 'OnStartRecording' message to Unity");
-	}
-	else {
-		console.error("Could not find the Unity Instance to send 'OnStartRecording' message");
-	}
+    } else {
+        console.error("Could not find the Unity Instance to send 'OnStartRecording' message");
+    }
+
     setTimeout(() => {
-         if(recording){
-                stopRecording();
-         }
+        if (recording) {
+            stopRecording();
+        }
     }, maxRecordingTime * 1000);
 }
 
 function stopRecording() {
     recording = false;
-	const recordButton = document.getElementById('recordButton');
+    const recordButton = document.getElementById('recordButton');
     if (recordButton) {
         recordButton.classList.remove('recording');
     } else {
@@ -160,17 +162,17 @@ function stopRecording() {
     if (circle) {
         circle.style.strokeDashoffset = circle.getAttribute('r') * 2 * Math.PI;
     } else {
-        console.error("Could not find the progress-ring__bar to reset the offset")
+        console.error("Could not find the progress-ring__bar to reset the offset");
     }
 
     if (window.unityInstance) {
-		window.unityInstance.SendMessage('ARCamera', 'OnStopRecording');
+        window.unityInstance.SendMessage('ARCamera', 'OnStopRecording');
         console.log("Sent 'OnStopRecording' message to Unity");
-	}
-	else {
-		console.error("Could not find the Unity Instance to send 'OnStopRecording' message");
-	}
+    } else {
+        console.error("Could not find the Unity Instance to send 'OnStopRecording' message");
+    }
 }
+
 
 function updateProgress() {
     if (!recording) return;
@@ -179,14 +181,14 @@ function updateProgress() {
     const percentage = elapsedTime / maxRecordingTime;
 
     if (percentage >= 1) {
-        stopRecording(); // Stop if time's up
+        stopRecording();
     } else {
         const circle = document.querySelector('.progress-ring__bar');
         if (circle) {
-             const circumference = circle.getAttribute('r') * 2 * Math.PI;
+            const circumference = circle.getAttribute('r') * 2 * Math.PI;
             const offset = circumference * (1 - percentage);
             circle.style.strokeDashoffset = offset;
-            requestAnimationFrame(updateProgress); // Keep updating
+            requestAnimationFrame(updateProgress);
         } else {
             console.error("Could not find progress-ring__bar to update progress");
         }
@@ -204,6 +206,15 @@ async function OnVideoDataURLReceived(dataURL) {
         return;
     }
 
+     // Use window.FFmpeg here as well
+    if (typeof window.FFmpeg === 'undefined') {
+        console.error("FFmpeg is still undefined in OnVideoDataURLReceived!");
+        ShowError("FFmpeg initialization error.");
+        return;
+    }
+    let ffmpeg = window.FFmpeg.createFFmpeg({ log: true, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
+    await ffmpeg.load();
+
     // 1. Convert dataURL to Uint8Array
     const response = await fetch(dataURL);
     const blob = await response.blob();
@@ -211,7 +222,7 @@ async function OnVideoDataURLReceived(dataURL) {
     const uint8Array = new Uint8Array(arrayBuffer);
 
     // 2. Write to FFmpeg's virtual file system
-    ffmpeg.FS('writeFile', 'input.webm', uint8Array); // Or .mp4, depending on original recording
+    ffmpeg.FS('writeFile', 'input.webm', uint8Array); // Or .mp4, depending on original
 
     // 3. Run FFmpeg command (example: re-encode to H.264 MP4)
     try {
@@ -248,25 +259,21 @@ async function OnVideoDataURLReceived(dataURL) {
 
 // --- Download and Share Logic (JavaScript) ---
 
-// Function to download the video (triggered by the download button)
 function downloadVideo() {
     if (!videoDataURL) {
         console.error("No video data URL available to download.");
         return;
     }
 
-    // Create a temporary link element
     const downloadLink = document.createElement('a');
     downloadLink.href = videoDataURL;
-    downloadLink.download = 'recorded-video.mp4'; // Or .webm, depending on recording
+    downloadLink.download = 'recorded-video.mp4';
 
-    // Append the link to the body, click it, and remove it
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
 }
 
-// Function to share the video (triggered by the share button)
 async function shareVideo() {
     if (!videoDataURL) {
         console.error("No video data URL available for sharing.");
@@ -278,9 +285,8 @@ async function shareVideo() {
         const blob = await response.blob();
         const file = new File([blob], "recorded-video.mp4", { type: "video/mp4" });
 
-
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
+            await navigator.share({
                 files: [file],
                 title: 'Recorded Video',
                 text: 'Check out this recorded video!',
@@ -289,25 +295,26 @@ async function shareVideo() {
         } else {
             console.warn("Web Share API is not fully supported or file sharing is not allowed. Falling back to download.");
             ShowError("Sharing is not supported on this browser. Please download the video instead.");
-            downloadVideo();
+            downloadVideo(); // Fallback to download
         }
     } catch (error) {
         console.error("Error during share operation:", error);
         ShowError("Failed to share: " + error.message);
     }
 }
- function ShowVideoPreview(videoURL) {
-      var videoPreviewDiv = document.getElementById('videoPreviewDiv');
+
+function ShowVideoPreview(videoURL) {
+    var videoPreviewDiv = document.getElementById('videoPreviewDiv');
     document.getElementById('cameraButtonContainer').style.display = "none";
     videoPreviewDiv.style.opacity = 1;
     videoPreviewDiv.style.visibility = 'visible';
 
     const video = document.getElementById('videoPreview');
     video.src = videoURL;
-     video.style.width = "80vw";
+    video.style.width = "80vw";
     video.style.height = 80 / window.innerWidth * window.innerHeight + "vw";
       video.onloadedmetadata = function() {
-        URL.revokeObjectURL(this.src); // Revoke URL after metadata is loaded if the blob is local
+        URL.revokeObjectURL(this.src);
     };
 }
 
