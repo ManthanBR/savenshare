@@ -1,4 +1,4 @@
-// sns_custom.js (Corrected)
+// sns_custom.js (Corrected with FFmpeg.wasm)
 
 let unityReady = false;
 let startARButtonListenerAdded = false;
@@ -37,8 +37,8 @@ async function loadFFmpeg() {
 function setupEventListeners() {
     console.log("Attaching event listeners");
     const recordButton = document.getElementById('recordButton');
-    const saveVideoButton = document.getElementById('saveVideoButton'); // Get the save button
-    const shareVideoButton = document.getElementById('shareVideoButton'); // Get the share button
+    const saveVideoButton = document.getElementById('saveVideoButton');
+    const shareVideoButton = document.getElementById('shareVideoButton');
 
     if (recordButton) {
         recordButton.addEventListener('click', toggleRecording);
@@ -47,13 +47,13 @@ function setupEventListeners() {
     }
 
     if (saveVideoButton) {
-        saveVideoButton.addEventListener('click', downloadVideo); // Attach to the button
+        saveVideoButton.addEventListener('click', downloadVideo);
     } else {
         console.error("saveVideoButton not found!");
     }
 
     if (shareVideoButton) {
-        shareVideoButton.addEventListener('click', shareVideo); // Attach to the button
+        shareVideoButton.addEventListener('click', shareVideo);
     } else {
         console.error("shareVideoButton not found!");
     }
@@ -70,7 +70,6 @@ function toggleRecording() {
 window.addEventListener("load", function () {
      console.log("sns_custom.js: Page loaded! Initializing");
 
-    // Hide the button first
     const recordButtonContainer = document.getElementById('cameraButtonContainer');
     if (recordButtonContainer) {
         recordButtonContainer.style.opacity = 0;
@@ -84,7 +83,6 @@ window.addEventListener("load", function () {
                 console.log("Unity progress bar completed!");
                 clearInterval(interval);
                 unityReady = true;
-                // Show the button only when the game has started (or allow access button is not visible)
                 if (document.getElementById("startARDiv").style.visibility != 'visible') {
                     recordButtonContainer.style.display = "block";
                     setTimeout(() => {
@@ -143,7 +141,6 @@ function startRecording() {
 	else {
 		console.error("Could not find the Unity Instance to send 'OnStartRecording' message");
 	}
-      // Set a timer to stop recording automatically after maxRecordingTime seconds
     setTimeout(() => {
          if(recording){
                 stopRecording();
@@ -309,7 +306,19 @@ async function shareVideo() {
     video.src = videoURL;
      video.style.width = "80vw";
     video.style.height = 80 / window.innerWidth * window.innerHeight + "vw";
-     video.onloadedmetadata = function() {
+      video.onloadedmetadata = function() {
         URL.revokeObjectURL(this.src); // Revoke URL after metadata is loaded if the blob is local
     };
 }
+
+function HideVideoPreview(){
+        var videoPreviewDiv = document.getElementById('videoPreviewDiv');
+           videoPreviewDiv.style.opacity = 0;
+           setTimeout(()=>{
+              videoPreviewDiv.style.visibility = 'hidden';
+
+              document.getElementById('cameraButtonContainer').style.display = "block";
+
+
+            }, 500);
+      }
