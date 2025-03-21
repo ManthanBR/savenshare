@@ -1,4 +1,4 @@
-// sns_custom.js (Corrected with FFmpeg.wasm and Global Scope Fix)
+// sns_custom.js (Corrected - Async Load and Initialization)
 
 let unityReady = false;
 let startARButtonListenerAdded = false;
@@ -6,7 +6,6 @@ let recording = false;
 let startTime;
 const maxRecordingTime = 59;
 let videoDataURL = null;
-// let ffmpeg = null; // No longer needed at top-level
 let ffmpegReady = false;
 
 console.log("sns_custom.js: Script start");
@@ -15,26 +14,42 @@ console.log("sns_custom.js: Script start");
 async function loadFFmpeg() {
     if (ffmpegReady) return;
 
-    // Check if window.FFmpeg is available (set in index.html)
     if (typeof window.FFmpeg === 'undefined' || typeof window.FFmpeg.createFFmpeg === 'undefined') {
         console.error("FFmpeg library is not loaded correctly. Check script tags in index.html.");
         ShowError("FFmpeg library is not loaded. Check index.html");
         return;
     }
 
-    // Use window.FFmpeg.createFFmpeg
     let ffmpeg = window.FFmpeg.createFFmpeg({ log: true, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
 
     try {
         await ffmpeg.load();
         ffmpegReady = true;
         console.log("FFmpeg loaded successfully");
+        initializeAfterFFmpeg(); // Call initialization function here
     } catch (err) {
         console.error("Failed to load FFmpeg:", err);
         ShowError("Failed to load FFmpeg: " + err.message);
     }
 }
 
+// NEW FUNCTION: Initialize things that depend on FFmpeg
+function initializeAfterFFmpeg() {
+    setupEventListeners(); // Now safe to set up listeners
+
+    if (document.getElementById("startARButton") != null && !startARButtonListenerAdded) {
+        startARButtonListenerAdded = true;
+        document.getElementById("startARButton").addEventListener('click', function () {
+            const recordButtonContainer = document.getElementById('cameraButtonContainer');
+            if (unityReady && recordButtonContainer) {
+                recordButtonContainer.style.display = "block";
+                setTimeout(() => {
+                    recordButtonContainer.style.opacity = 1;
+                }, 50);
+            }
+        });
+    }
+}
 
 function setupEventListeners() {
     console.log("Attaching event listeners");
@@ -69,7 +84,8 @@ function toggleRecording() {
     }
 }
 
-window.addEventListener("load", function () {
+// Make the ENTIRE load event handler async
+window.addEventListener("load", async function () { // Add async here
     console.log("sns_custom.js: Page loaded! Initializing");
 
     const recordButtonContainer = document.getElementById('cameraButtonContainer');
@@ -97,23 +113,14 @@ window.addEventListener("load", function () {
         console.error("Could not find recordButtonContainer to set the visibility");
     }
 
-    setupEventListeners();
+    // setupEventListeners(); // Moved INSIDE initializeAfterFFmpeg
+    // loadFFmpeg();        // Call loadFFmpeg, and WAIT for it
 
-    if (document.getElementById("startARButton") != null && !startARButtonListenerAdded) {
-        startARButtonListenerAdded = true;
-        document.getElementById("startARButton").addEventListener('click', function () {
-            const recordButtonContainer = document.getElementById('cameraButtonContainer');
-            if (unityReady && recordButtonContainer) {
-                recordButtonContainer.style.display = "block";
-                setTimeout(() => {
-                    recordButtonContainer.style.opacity = 1;
-                }, 50);
-            }
-        });
-    }
-
-    loadFFmpeg(); // Load FFmpeg after everything is set up
+     await loadFFmpeg(); // AWAIT the completion of loadFFmpeg
+    // initializeAfterFFmpeg(); // Moved INSIDE loadFFmpeg, after ffmpeg.load()
 });
+
+
 
 function resetProgress() {
     console.log("Video recording complete! Resetting progress bar");
@@ -173,7 +180,6 @@ function stopRecording() {
     }
 }
 
-
 function updateProgress() {
     if (!recording) return;
     const currentTime = Date.now();
@@ -206,7 +212,7 @@ async function OnVideoDataURLReceived(dataURL) {
         return;
     }
 
-     // Use window.FFmpeg here as well
+    // Use window.FFmpeg here as well
     if (typeof window.FFmpeg === 'undefined') {
         console.error("FFmpeg is still undefined in OnVideoDataURLReceived!");
         ShowError("FFmpeg initialization error.");
@@ -222,9 +228,9 @@ async function OnVideoDataURLReceived(dataURL) {
     const uint8Array = new Uint8Array(arrayBuffer);
 
     // 2. Write to FFmpeg's virtual file system
-    ffmpeg.FS('writeFile', 'input.webm', uint8Array); // Or .mp4, depending on original
+    ffmpeg.FS('writeFile', 'input.webm', uint8Array); // Or .mp4
 
-    // 3. Run FFmpeg command (example: re-encode to H.264 MP4)
+    // 3. Run FFmpeg command
     try {
         await ffmpeg.run(
             '-i', 'input.webm',
@@ -246,7 +252,7 @@ async function OnVideoDataURLReceived(dataURL) {
     // 4. Read the output file
     const outputData = ffmpeg.FS('readFile', 'output.mp4');
 
-    // 5. Create a Blob from the output data
+    // 5. Create a Blob
     const outputBlob = new Blob([outputData.buffer], { type: 'video/mp4' });
 
     // 6. Create a URL for the Blob
@@ -257,7 +263,7 @@ async function OnVideoDataURLReceived(dataURL) {
 }
 
 
-// --- Download and Share Logic (JavaScript) ---
+// --- Download and Share Logic ---
 
 function downloadVideo() {
     if (!videoDataURL) {
@@ -293,9 +299,9 @@ async function shareVideo() {
             });
             console.log("Shared successfully via Web Share API.");
         } else {
-            console.warn("Web Share API is not fully supported or file sharing is not allowed. Falling back to download.");
-            ShowError("Sharing is not supported on this browser. Please download the video instead.");
-            downloadVideo(); // Fallback to download
+            console.warn("Web Share API is not fully supported. Falling back to download.");
+            ShowError("Sharing is not supported on this browser. Please download instead.");
+            downloadVideo();
         }
     } catch (error) {
         console.error("Error during share operation:", error);
@@ -313,7 +319,7 @@ function ShowVideoPreview(videoURL) {
     video.src = videoURL;
     video.style.width = "80vw";
     video.style.height = 80 / window.innerWidth * window.innerHeight + "vw";
-      video.onloadedmetadata = function() {
+    video.onloadedmetadata = function() {
         URL.revokeObjectURL(this.src);
     };
 }
