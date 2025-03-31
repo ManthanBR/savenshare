@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>codec</title>
+    <title>WeWork Sticker</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
     <link rel="manifest" href="manifest.webmanifest">
@@ -126,6 +126,9 @@
         <div id="unity-progress-bar-empty">
           <div id="unity-progress-bar-full"></div>
         </div>
+        <div id="logo-container">
+          <img src="weworklogo.png" alt="Logo">
+      </div>
         <div id="madeby-container">
           <img src="madeby.png" alt="Made By">
       </div>
@@ -222,7 +225,7 @@
           codeUrl: buildUrl + "/savenshare.wasm",
           streamingAssetsUrl: "StreamingAssets",
           companyName: "DefaultCompany",
-          productName: "codec",
+          productName: "WeWork Sticker",
           productVersion: "0.1",
           showBanner: unityShowBanner,
         };
@@ -449,22 +452,22 @@
           }, 500);
       }
       function ShowVideoPreview(videoURL) {
-          var videoPreviewDiv = document.getElementById('videoPreviewDiv');
-          videoPreviewDiv.style.opacity = 1;
-          videoPreviewDiv.style.visibility = 'visible';
+        //  var videoPreviewDiv = document.getElementById('videoPreviewDiv');
+        //  videoPreviewDiv.style.opacity = 1;
+        //  videoPreviewDiv.style.visibility = 'visible';
           document.getElementById('cameraButtonContainer').style.display = "none";
-          const video = document.getElementById('videoPreview');
-           video.src = videoURL;
-           video.style.width = "80vw";
-           video.style.height = 80 / window.innerWidth * window.innerHeight + "vw";
+         // const video = document.getElementById('videoPreview');
+         //  video.src = videoURL;
+         //  video.style.width = "80vw";
+          // video.style.height = 80 / window.innerWidth * window.innerHeight + "vw";
       }
       function HideVideoPreview(){
-        var videoPreviewDiv = document.getElementById('videoPreviewDiv');
+       // var videoPreviewDiv = document.getElementById('videoPreviewDiv');
         var tapcontainer = document.getElementById('tap-container');
-        window.unityInstance.SendMessage('ARCamera', 'OnPreviewClosed');
-           videoPreviewDiv.style.opacity = 0;
+       // window.unityInstance.SendMessage('ARCamera', 'OnPreviewClosed');
+          // videoPreviewDiv.style.opacity = 0;
            setTimeout(()=>{
-              videoPreviewDiv.style.visibility = 'hidden';
+            //  videoPreviewDiv.style.visibility = 'hidden';
               tapcontainer.style.opacity = 1;
               document.getElementById('cameraButtonContainer').style.display = "block";
             }, 500);
@@ -488,11 +491,11 @@
           INTERNAL_SMOOTHFACTOR_POS: .075,
       }
       function downloadVideo() {
-        window.unityInstance.SendMessage('ARCamera', 'OnDownloadVideoButtonPressed');
+     //   window.unityInstance.SendMessage('ARCamera', 'OnDownloadVideoButtonPressed');
          
         }
         async function shareVideo() {
-          window.unityInstance.SendMessage('ARCamera', 'OnShareVideoButtonPressed');
+        //  window.unityInstance.SendMessage('ARCamera', 'OnShareVideoButtonPressed');
       }      
     
     </script>
