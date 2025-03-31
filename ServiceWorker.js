@@ -1,4 +1,4 @@
-const cacheName = "DefaultCompany-codec-0.1";
+const cacheName = "DefaultCompany-WeWork Sticker-0.1";
 const contentToCache = [
     "Build/savenshare.loader.js",
     "Build/savenshare.framework.js",
