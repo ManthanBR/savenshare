@@ -31,7 +31,7 @@ window.addEventListener("load", function () {
         return;
     }
     ZapparVideoRecorder.createCanvasVideoRecorder(canvas, {
-        audio: false,
+        audio: true,
         useSharePrompt: false
     }).then(rec => {
         recorder = rec;
