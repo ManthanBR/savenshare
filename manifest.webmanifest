@@ -1,6 +1,6 @@
 {
-    "name": "WeWork Sticker",
-    "short_name": "WeWork Sticker",
+    "name": "codec",
+    "short_name": "codec",
     "start_url": "index.html",
     "display": "fullscreen",
     "background_color": "#231F20",
