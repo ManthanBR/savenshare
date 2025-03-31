@@ -8,7 +8,12 @@ body { padding: 0; margin: 0; overflow: hidden; }
     top: 80%;
     transform: translate(-50%, 0%) scale(0.3); /* Scale down to 80% */
 }
-
+#logo-container {
+    position: absolute;
+    left: 50%;
+    top: 80%;
+    transform: translate(-50%, -60%) scale(0.4); /* Scale down to 80% */
+}
 #tap-container {
     position: absolute;
     left: 50%;
