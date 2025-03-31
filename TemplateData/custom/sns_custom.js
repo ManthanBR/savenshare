@@ -67,7 +67,7 @@ window.addEventListener("load", function () {
         recorder.onComplete.bind(async (res) => {
            ZapparSharing({
                 data: await res.asDataURL(),
-                fileNamePrepend: 'MyCustomVideo',
+                fileNamePrepend: 'WeWorkSticker',
                 shareTitle: 'Check out my Video',
                 shareText: 'Recorded using FilterYouAR',
               },
@@ -124,7 +124,7 @@ window.addEventListener("zappar-sns-ready", function () {
                 if (saveButton) {
                     console.log("Save button found!");
                     saveButton.removeAttribute('download');
-                    saveButton.setAttribute('download', 'MyCustomVideoName.mp4');
+                    saveButton.setAttribute('download', 'WeWorkSticker.mp4');
                     console.log("Save button download attribute set to MyCustomVideoName.mp4");
                     observer.disconnect();
                 }
@@ -139,6 +139,8 @@ function startRecording() {
         console.log("Starting video recording without custom audio");
         recording = true;
         startTime = Date.now();
+        var tapcontainer = document.getElementById('tap-container');
+        tapcontainer.style.opacity = 0;
          const recordButton =  document.getElementById('recordButton');
          if(recordButton){
               recordButton.classList.add('recording');
@@ -156,6 +158,8 @@ function stopRecording() {
     if (recorder) {
         console.log("Stopping video recording without custom audio");
         recording = false;
+        var tapcontainer = document.getElementById('tap-container');
+        tapcontainer.style.opacity = 1;
         const recordButton = document.getElementById('recordButton');
           if(recordButton){
              recordButton.classList.remove('recording');
