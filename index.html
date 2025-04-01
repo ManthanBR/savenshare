@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>codec</title>
+    <title>WeWork Sticker</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
     <link rel="manifest" href="manifest.webmanifest">
@@ -24,6 +24,8 @@
     </style>
   </head>
   <body>
+    <script src="https://libs.zappar.com/zappar-videorecorder/1.0.1/zappar-videorecorder.js"></script>
+    <script src="https://libs.zappar.com/zappar-sharing/1.1.8/zappar-sharing.min.js"></script>
     <!--IMAGETARGETS-->
 		<imagetarget id='277669660_345342630984036_6427493968813754284_n' src='targets/277669660_345342630984036_6427493968813754284_n.png'></imagetarget>
 		<imagetarget id='1' src='targets/1.jpg'></imagetarget>
@@ -121,7 +123,7 @@
         <p id="errorText" style="text-align: center; width:60vw; color:#7f3f3f; font-size: max(3vw, 3vh);"></p>
     </div>
     <div id="unity-container">
-      <canvas id="unity-canvas" width=320 height=512 tabindex="-1"></canvas>
+      <canvas id="unity-canvas" width=250 height=512 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
         <div id="unity-progress-bar-empty">
           <div id="unity-progress-bar-full"></div>
@@ -137,8 +139,6 @@
 </div>
     <script src="arcamera.js" type="text/javascript"></script>
     <script src="itracker.js" type="text/javascript"></script>
-    <script src="https://libs.zappar.com/zappar-videorecorder/1.0.1/zappar-videorecorder.js"></script>
-    <script src="https://libs.zappar.com/zappar-sharing/1.1.8/zappar-sharing.min.js"></script>
     <script src="TemplateData/custom/sns_custom.js"></script>
     </body>
     <script>
@@ -225,7 +225,7 @@
           codeUrl: buildUrl + "/savenshare.wasm",
           streamingAssetsUrl: "StreamingAssets",
           companyName: "DefaultCompany",
-          productName: "codec",
+          productName: "WeWork Sticker",
           productVersion: "0.1",
           showBanner: unityShowBanner,
         };
@@ -452,22 +452,22 @@
           }, 500);
       }
       function ShowVideoPreview(videoURL) {
-          var videoPreviewDiv = document.getElementById('videoPreviewDiv');
-          videoPreviewDiv.style.opacity = 1;
-          videoPreviewDiv.style.visibility = 'visible';
+        //  var videoPreviewDiv = document.getElementById('videoPreviewDiv');
+        //  videoPreviewDiv.style.opacity = 1;
+        //  videoPreviewDiv.style.visibility = 'visible';
           document.getElementById('cameraButtonContainer').style.display = "none";
-          const video = document.getElementById('videoPreview');
-           video.src = videoURL;
-           video.style.width = "80vw";
-           video.style.height = 80 / window.innerWidth * window.innerHeight + "vw";
+         // const video = document.getElementById('videoPreview');
+         //  video.src = videoURL;
+         //  video.style.width = "80vw";
+          // video.style.height = 80 / window.innerWidth * window.innerHeight + "vw";
       }
       function HideVideoPreview(){
-        var videoPreviewDiv = document.getElementById('videoPreviewDiv');
+       // var videoPreviewDiv = document.getElementById('videoPreviewDiv');
         var tapcontainer = document.getElementById('tap-container');
-        window.unityInstance.SendMessage('ARCamera', 'OnPreviewClosed');
-           videoPreviewDiv.style.opacity = 0;
+       // window.unityInstance.SendMessage('ARCamera', 'OnPreviewClosed');
+          // videoPreviewDiv.style.opacity = 0;
            setTimeout(()=>{
-              videoPreviewDiv.style.visibility = 'hidden';
+            //  videoPreviewDiv.style.visibility = 'hidden';
               tapcontainer.style.opacity = 1;
               document.getElementById('cameraButtonContainer').style.display = "block";
             }, 500);
@@ -491,11 +491,11 @@
           INTERNAL_SMOOTHFACTOR_POS: .075,
       }
       function downloadVideo() {
-        window.unityInstance.SendMessage('ARCamera', 'OnDownloadVideoButtonPressed');
+     //   window.unityInstance.SendMessage('ARCamera', 'OnDownloadVideoButtonPressed');
          
         }
         async function shareVideo() {
-          window.unityInstance.SendMessage('ARCamera', 'OnShareVideoButtonPressed');
+        //  window.unityInstance.SendMessage('ARCamera', 'OnShareVideoButtonPressed');
       }      
     
     </script>
