@@ -166,7 +166,7 @@
     height: 60px !important;
     margin: 10px !important;
     border-radius: 12px !important; /* Less rounded corners */
-    background-color: #000000 !important;  /* Use a slightly richer red */
+    background-color: #e74c3c !important;  /* Use a slightly richer red */
     color: #fff !important; /* White text */
     transition: background-color 0.3s ease, box-shadow 0.3s ease !important; /* Smooth transition */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important; /* Lighter shadow */
@@ -208,7 +208,7 @@
 }
 
 #zapparSaveButton:hover, #zapparShareButton:hover {
-    background-color: #0c0c0c !important; /* Slightly darker hover color */
+    background-color: #c0392b !important; /* Slightly darker hover color */
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2) !important; /* Slightly larger shadow */
 }
 
