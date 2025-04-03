@@ -149,317 +149,418 @@
   gtag('config', 'G-QJR77L2KVZ');
 </script>
     
-    <script>
-      // Disable double-tap to zoom
-      document.addEventListener('touchstart', function (event) {
-        if (event.touches.length > 1) {
-          event.preventDefault();
-        }
-      }, { passive: false });
-      // Disable pinch to zoom
-      document.addEventListener('gesturestart', function (event) {
-        event.preventDefault();
-      });
-      var initialize = async() =>{
-        var unityCanvas = document.querySelector("#unity-canvas");
-        var videoCanvas = document.querySelector("#video-canvas");
-        window.arCamera = new ARCamera(unityCanvas, videoCanvas);
-        window.iTracker = new ImageTracker(arCamera);
-        try{
-            await window.iTracker.initialize("./opencv.js");
-            console.log("ImageTracker initialized!");
-        }
-        catch{
-            console.error("Failed to initialize ImageTracker. Are you missing opencv.js? " + error);
-            ShowError("Failed to initialize the experience.");
-            return;
-        }
-        await LoadWebcams();
-        document.getElementById("startARButton").style.visibility = "visible";
-        window.permissionsGranted = IsCameraPermissionGranted();
-      }
-      initialize();
-      window.addEventListener("load", function () {
-        if ("serviceWorker" in navigator) {
-          navigator.serviceWorker.register("ServiceWorker.js");
-        }
-      });
-      var container = document.querySelector("#unity-container");
-      var canvas = document.querySelector("#unity-canvas");
-      var loadingBar = document.querySelector("#unity-loading-bar");
-      var progressBarFull = document.querySelector("#unity-progress-bar-full");
-      var warningBanner = document.querySelector("#unity-warning");
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
-      function unityShowBanner(msg, type) {
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
-      }
-      let unityInstanceLoaded = false;
-         let unityInstance; // Define unityInstance here
-      function StartAR() {
-        var startARDiv = document.querySelector("#startARDiv");
-        var startARButton = document.getElementById("startARButton");
-        var chooseCamSel = document.getElementById("chooseCamSel");
-        // Disable the button and dropdown
-        startARButton.disabled = true;
-        chooseCamSel.disabled = true;
-        startARDiv.style.opacity = 0;
-        setTimeout(()=>{
-          startARDiv.style.visibility = "hidden";
-        }, 500);
-        var buildUrl = "Build";
-        var loaderUrl = buildUrl + "/savenshare.loader.js";
-        var config = {
-          dataUrl: buildUrl + "/savenshare.data",
-          frameworkUrl: buildUrl + "/savenshare.framework.js",
-          codeUrl: buildUrl + "/savenshare.wasm",
-          streamingAssetsUrl: "StreamingAssets",
-          companyName: "DefaultCompany",
-          productName: "WeWork Sticker",
-          productVersion: "0.1",
-          showBanner: unityShowBanner,
-        };
-        // By default Unity keeps WebGL canvas render target size matched with
-        // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-        // Set this to false if you want to decouple this synchronization from
-        // happening inside the engine, and you would instead like to size up
-        // the canvas DOM size and WebGL render target sizes yourself.
-        // config.matchWebGLToCanvasSize = false;
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          // Mobile device style: fill the whole browser client area with the game canvas:
-          var meta = document.createElement('meta');
-          meta.name = 'viewport';
-          meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-          document.getElementsByTagName('head')[0].appendChild(meta);
-        }
-        loadingBar.style.display = "block";
-        var script = document.createElement("script");
-        script.src = loaderUrl;
-        script.onload = () => {
-          createUnityInstance(canvas, config, (progress) => {
-            progressBarFull.style.width = 100 * progress + "%";
-          }).then((unityInstance) => {
-            loadingBar.style.display = "none";
-            unityInstanceLoaded = true;
-            window.unityInstance = unityInstance; // Store unityInstance here
-            
-            if(window.permissionsGranted) {
-              RequestWebcam();
-            }
-            const recordButton = document.getElementById('recordButton');
-              recordButton.classList.add('ready');
-               onUnityLoaded();
-          }).catch((message) => {
-            alert(message);
-          });
-        };
-        document.body.appendChild(script);
-      }
-      function onUnityLoaded(){
-          console.log("Unity Loaded")
-           //You may set your audio capture here
-        }
-        //Set Facing Mode here ('environment', 'user', '')
+<script>
+  // Disable troublesome gestures
+  document.addEventListener('touchstart', function (event) {
+    if (event.touches.length > 1) {
+      event.preventDefault(); // Prevent pinch-zoom
+    }
+  }, { passive: false });
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', function (event) {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) { // Detect double-tap
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, false);
+  document.addEventListener('gesturestart', function (event) {
+    event.preventDefault(); // Prevent gesture zoom
+  });
+  // --- Global Variables ---
+  var unityCanvas = document.querySelector("#unity-canvas");
+  var videoCanvas = document.querySelector("#video-canvas");
+  var container = document.querySelector("#unity-container");
+  var loadingBar = document.querySelector("#unity-loading-bar");
+  var progressBarFull = document.querySelector("#unity-progress-bar-full");
+  var warningBanner = document.querySelector("#unity-warning");
+  var startARDiv = document.querySelector("#startARDiv");
+  var startARButton = document.getElementById("startARButton");
+  var chooseCamSel = document.getElementById("chooseCamSel");
+  var recordButtonContainer = document.getElementById("cameraButtonContainer");
+  var tapContainer = document.getElementById("tap-container");
+  let unityInstance = null; // Use let for reassignment
+  let unityInstanceLoaded = false;
+  let tempStream = null; // Holds stream acquired during StartAR for iOS fix
+  let permissionsGranted = false; // Track permission state
+  // Default Facing Mode and Webcam Settings
 		window.unityFacingMode = "environment"
-        window.WEBCAM_SETTINGS = {
-            video: {
-                facingMode: unityFacingMode,
-            },
-            audio: false
-        };
-      window.requestingForPermissions = false;
-      async function RequestWebcam(){
-          window.requestingForPermissions = true;
-          try{
-              window.webcamStream = await navigator.mediaDevices.getUserMedia(window.WEBCAM_SETTINGS);
-              console.log("Webcam access granted");
-              requestingForPermissions = false;
-              // Immediately stop the stream to release the camera
-              StopWebcam();
+  window.WEBCAM_SETTINGS = {
+      video: {
+          facingMode: window.unityFacingMode,
+          width: { ideal: 1280 }, // Request HD-ish resolution
+          height: { ideal: 720 }
+          // deviceId will be added if selected from dropdown
+      },
+      audio: false // Request only video initially for permission prompt simplicity
+  };
+  // --- Initialization ---
+  var initialize = async() => {
+    window.arCamera = new ARCamera(unityCanvas, videoCanvas);
+    window.iTracker = new ImageTracker(arCamera);
+    try{
+        await window.iTracker.initialize("./opencv.js");
+        console.log("ImageTracker initialized!");
+    }
+    catch(error){
+        console.error("Failed to initialize ImageTracker. Are you missing opencv.js? " + error);
+        ShowError("Failed to initialize the experience.");
+        return;
+    }
+    await LoadWebcams(); // Populate camera dropdown
+    startARButton.style.visibility = "visible"; // Show button only after init
+    // Check initial permission state *without* prompting
+    permissionsGranted = await IsCameraPermissionGranted();
+    console.log("Initial camera permission state:", permissionsGranted);
+  }
+  // --- Unity Loading and Startup ---
+  async function StartAR() { // Made async
+      // Disable UI immediately
+      startARButton.disabled = true;
+      chooseCamSel.disabled = true;
+      startARButton.style.opacity = 0.5; // Visual feedback
+      console.log("StartAR clicked. Requesting camera permission first...");
+      try {
+          // *** iOS Fix: Request camera permission directly tied to the click ***
+          console.log("Requesting getUserMedia with settings:", JSON.stringify(window.WEBCAM_SETTINGS));
+          tempStream = await navigator.mediaDevices.getUserMedia(window.WEBCAM_SETTINGS);
+          console.log("Webcam access granted directly within StartAR.");
+          permissionsGranted = true; // Update state
+          // Permission granted: Hide start UI, show loading bar
+          startARDiv.style.opacity = 0;
+          loadingBar.style.display = "block";
+          // Visibility handled by CSS transition rule
+          // Proceed to load Unity
+          var buildUrl = "Build";
+          var loaderUrl = buildUrl + "/savenshare.loader.js";
+          var config = {
+            dataUrl: buildUrl + "/savenshare.data",
+            frameworkUrl: buildUrl + "/savenshare.framework.js",
+            codeUrl: buildUrl + "/savenshare.wasm",
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "DefaultCompany",
+            productName: "WeWork Sticker",
+            productVersion: "0.1",
+            showBanner: unityShowBanner,
+          };
+          // Mobile viewport adjustments
+          if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            var meta = document.querySelector('meta[name="viewport"]'); // Check if exists
+            if (!meta) { // Add if not present
+                meta = document.createElement('meta');
+                meta.name = 'viewport';
+                document.getElementsByTagName('head')[0].appendChild(meta);
+            }
+             meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
           }
-          catch (err) {
-              //user denied camera permission - show error panel
-              console.error("getUserMedia error - " , err);
-              ShowError("Failed to start the experience. Camera permission was denied");
-              window.requestingForPermissions = false;
-          }           
-      }
-      function StopWebcam(){
-          console.log("stopping camera");
-          window.webcamStream.getTracks().forEach(track => track.stop());    
-      }
-      async function StartWebcam(){
-          console.log("StartWebcam")
-          window.webcamStream = await navigator.mediaDevices.getUserMedia(window.WEBCAM_SETTINGS);
-          while (window.requestingForPermissions) {
-              // Wait until requestingForPermissions becomes true.
-              console.log("Waiting for permissions...");
-              await new Promise(resolve => setTimeout(resolve, 100)); // Adjust the delay time as needed.
-          }
-          console.log("Got Permissions");
-          if(window.webcamStream)
-          {
-              const video = document.querySelector("#webcam-video");
-              video.srcObject = webcamStream;
-              try {
-                  await arCamera.startWebcam(video);
-                  console.log("Webcam started successfully");
-                  window.unityInstance.SendMessage('ARCamera', 'OnStartWebcamSuccess');
-                  window.unityInstance.SendMessage('ARCamera', 'LoadingComplete');
-                  
-                  //Show record button
-                   var recordButtonContainer = document.getElementById("cameraButtonContainer");
-                   if(recordButtonContainer){
-                        recordButtonContainer.style.display = "block";
-                   } else {
-                       console.error("Could not find cameraButtonContainer to make it visible")
-                   }
-                 
-                  //replace background transparency
-                  const canvas = document.querySelector("#unity-canvas");
-                  let bgColor = window.getComputedStyle(canvas).backgroundColor;
-                  canvas.style.background = bgColor.replace("rgb", "rgba").replace(")", ", 0)");
-                  
+          // Load Unity script
+          var script = document.createElement("script");
+          script.src = loaderUrl;
+          script.onload = () => {
+            createUnityInstance(unityCanvas, config, (progress) => {
+              progressBarFull.style.width = 100 * progress + "%";
+            }).then((instance) => {
+              // --- Unity Loaded Successfully ---
+              loadingBar.style.display = "none";
+              unityInstanceLoaded = true;
+              window.unityInstance = instance; // Assign to global scope
+              console.log("Unity Instance created successfully.");
+              // Prepare record button (will be shown by StartWebcam)
+              const recordButton = document.getElementById('recordButton');
+              if (recordButton) recordButton.classList.add('ready');
+              onUnityLoaded(); // Call custom function
+              // Unity will call StartWebcam next via SendMessage
+            }).catch((message) => {
+              // --- Unity Loading Failed ---
+              console.error("Unity Instance creation failed:", message);
+              ShowError("Failed to load the experience. " + message);
+              loadingBar.style.display = "none";
+              // Re-enable button for retry?
+              startARButton.disabled = false;
+              startARButton.style.opacity = 1;
+              chooseCamSel.disabled = false;
+              startARDiv.style.opacity = 1; // Show start div again
+              // Clean up stream if Unity load failed
+              if (tempStream) {
+                 tempStream.getTracks().forEach(track => track.stop());
+                 tempStream = null;
               }
-              catch(err){
-                  console.error("Webcam failed to start - ", err);
-                  window.unityInstance.SendMessage('ARCamera', 'OnStartWebcamFail');
-              }   
-          }
-          else{
-              console.error("Webcam failed to start - permission not yet granted");
-              window.unityInstance.SendMessage('ARCamera', 'OnStartWebcamFail');
-          }  
+            });
+          };
+          document.body.appendChild(script);
+      } catch (err) {
+          // --- getUserMedia Failed ---
+          console.error("getUserMedia error within StartAR - ", err.name, err.message);
+          let errorMsg = "Camera permission is required.";
+           if (err.name === "NotAllowedError") {
+               errorMsg = "Camera permission was denied. Please grant permission in your browser settings.";
+           } else if (err.name === "NotFoundError") {
+               errorMsg = "No camera found, or the selected camera is unavailable.";
+           } else if (err.name === "NotReadableError") {
+               errorMsg = "Camera might be already in use by another application.";
+           } else {
+               errorMsg = "Could not access the camera. Error: " + err.name;
+           }
+          ShowError("Failed to start: " + errorMsg);
+          // Re-enable the button and dropdown
+          startARButton.disabled = false;
+          startARButton.style.opacity = 1;
+          chooseCamSel.disabled = false;
+          tempStream = null; // Ensure tempStream is null
+          permissionsGranted = false;
       }
-      async function LoadWebcams(){
-          let camDevices = [];
-          // let backCams = [];
+  }
+  function onUnityLoaded(){
+      console.log("Unity has finished loading its assets.");
+      // Potential place for other setup after Unity is ready but before webcam starts
+  }
+  // --- Webcam Management ---
+  async function StartWebcam(){
+      console.log("StartWebcam called (likely by Unity)");
+      const video = document.querySelector("#webcam-video");
+      if (!video) {
+          console.error("webcam-video element not found!");
+          if(unityInstance) unityInstance.SendMessage('ARCamera', 'OnStartWebcamFail');
+          return;
+      }
+      try {
+          // Check if we already have a stream from the initial permission grant (iOS Fix)
+          if (tempStream) {
+              console.log("Using pre-acquired stream from StartAR.");
+              window.webcamStream = tempStream;
+              tempStream = null; // Consume the temporary stream
+          } else if (permissionsGranted) {
+              // If no tempStream, but permission was known to be granted, request it now
+              // (e.g., page reload after permission granted, or if StartAR somehow didn't keep the stream)
+              console.log("No pre-acquired stream, requesting getUserMedia again (permission previously granted). Settings:", JSON.stringify(window.WEBCAM_SETTINGS));
+               window.webcamStream = await navigator.mediaDevices.getUserMedia(window.WEBCAM_SETTINGS);
+              console.log("getUserMedia successful in StartWebcam.");
+          } else {
+              // This case shouldn't normally happen if StartAR logic is correct
+              console.error("StartWebcam called but no pre-acquired stream and permission not granted.");
+               throw new Error("Camera permission not available when StartWebcam was called.");
+          }
+          // Proceed if we have a stream
+          if(window.webcamStream) {
+              video.srcObject = window.webcamStream;
+              // Wait for video metadata to load (important for dimensions/aspect ratio)
+               await new Promise((resolve, reject) => {
+                   video.onloadedmetadata = resolve;
+                   video.onerror = reject; // Handle potential video errors
+                   // Add a timeout?
+                   // setTimeout(() => reject(new Error("Video metadata load timed out")), 5000);
+                   video.play().catch(reject); // Play is often needed for metadata on some browsers
+               });
+               console.log(`Video metadata loaded. Dimensions: ${video.videoWidth}x${video.videoHeight}`);
+              // Start AR Camera processing
+               await arCamera.startWebcam(video);
+              console.log("Webcam started successfully via arCamera.");
+              // Notify Unity
+              if(unityInstance) {
+                  unityInstance.SendMessage('ARCamera', 'OnStartWebcamSuccess');
+                  unityInstance.SendMessage('ARCamera', 'LoadingComplete'); // Confirm loading/startup complete
+              }
+              // Show record button container now that camera is running
+              if(recordButtonContainer){
+                  recordButtonContainer.style.display = "block"; // Make it take space
+                  setTimeout(() => { recordButtonContainer.style.opacity = 1; }, 50); // Fade in
+              } else {
+                 console.error("Could not find cameraButtonContainer to make it visible");
+              }
+              // Ensure Unity canvas is transparent for AR view
+              if (unityCanvas) {
+                  unityCanvas.style.background = 'transparent';
+                  console.log("Set Unity canvas background to transparent.");
+              } else {
+                  console.error("Could not find #unity-canvas to set background.");
+              }
+          } else {
+               console.error("Webcam stream is null or undefined after attempting to acquire.");
+               throw new Error("Failed to obtain webcam stream.");
+          }
+      } catch (err) {
+          console.error("Error during StartWebcam: ", err.name, err.message);
+          if(unityInstance) unityInstance.SendMessage('ARCamera', 'OnStartWebcamFail');
+          ShowError("Error starting camera: " + err.message);
+          // Clean up any potentially lingering stream
+          if (window.webcamStream) {
+              window.webcamStream.getTracks().forEach(track => track.stop());
+              window.webcamStream = null;
+          }
+           if (tempStream) { // Also cleanup tempStream if error occurred before consumption
+              tempStream.getTracks().forEach(track => track.stop());
+              tempStream = null;
+           }
+      }
+  }
+  async function LoadWebcams(){
+      let camDevices = [];
+      try {
           let devices = await navigator.mediaDevices.enumerateDevices();
-          var ctr = 0;
           devices.forEach(mediaDevice => {
               if (mediaDevice.kind === 'videoinput') {
-                  if(window.unityFacingMode == 'environment' && !mediaDevice.label.includes('facing front')){
-                      //back cam only
-                      camDevices.push(mediaDevice);
-                  }
-                  else if(window.unityFacingMode == 'user' && mediaDevice.label.includes('facing front')){
-                      //front cam only
-                      camDevices.push(mediaDevice);
-                  }
-                  else{
-                      //back and front
-                      camDevices.push(mediaDevice);
-                  }   
-                  
-                  ctr++;
+                  camDevices.push(mediaDevice);
               }
           });
-          var select = document.getElementById("chooseCamSel");
-          select.style.visibility = "visible";
-          var count = 0;
-          //reverse array because some Android phones can't distinguish front and back cams at first load
-          //and when this happens, most of the time, front cam goes first and back cam goes last
-          camDevices = camDevices.reverse();
-          camDevices.forEach(mediaDevice => {
-              const option = document.createElement('option');
-              option.value = mediaDevice.deviceId;
-              let label = `Camera ${count}`;
-              if (mediaDevice.label) {
-                  label = mediaDevice.label
-              }
-              const textNode = document.createTextNode(label);
-              option.appendChild(textNode);
-              select.appendChild(option);
-              count++;
-          });
-          iTracker.WEBCAM_NAME = select.options[select.selectedIndex].innerHTML;
-      }
-      function SelectCam(){
-          var select = document.getElementById("chooseCamSel");
-          window.deviceId = select.value;
-          window.WEBCAM_SETTINGS.video['deviceId'] = deviceId;
-          //console.log(window.WEBCAM_SETTINGS);
-          iTracker.WEBCAM_NAME = select.options[select.selectedIndex].innerHTML;
-      }
-      async function FlipCam(){
-          arCamera.stopWebcam();
-          window.WEBCAM_SETTINGS.video.deviceId = '';
-          if(window.WEBCAM_SETTINGS.video.facingMode == 'user'){
-              window.WEBCAM_SETTINGS.video.facingMode = 'environment';
-              arCamera.setFlipped(false);
+          // Clear existing options
+          chooseCamSel.innerHTML = '';
+          if (camDevices.length > 0) {
+              // Try to put preferred facing mode first if possible (heuristic)
+              camDevices.sort((a, b) => {
+                  let scoreA = 0;
+                  let scoreB = 0;
+                  const labelA = a.label.toLowerCase();
+                  const labelB = b.label.toLowerCase();
+                  const preferredFacing = window.unityFacingMode; // 'environment' or 'user'
+                  if (preferredFacing === 'environment' && labelA.includes('back')) scoreA = 1;
+                  if (preferredFacing === 'environment' && labelB.includes('back')) scoreB = 1;
+                  if (preferredFacing === 'user' && labelA.includes('front')) scoreA = 1;
+                  if (preferredFacing === 'user' && labelB.includes('front')) scoreB = 1;
+                  if (scoreB !== scoreA) return scoreB - scoreA; // Higher score first
+                  // Fallback sort by label
+                  return labelA.localeCompare(labelB);
+              });
+             chooseCamSel.style.visibility = "visible";
+             camDevices.forEach((mediaDevice, index) => {
+                 const option = document.createElement('option');
+                 option.value = mediaDevice.deviceId;
+                 let label = mediaDevice.label || `Camera ${index + 1}`;
+                  // Add hints if possible
+                 if (mediaDevice.label.toLowerCase().includes('front')) label += " (Front)";
+                 else if (mediaDevice.label.toLowerCase().includes('back')) label += " (Back)";
+                 option.appendChild(document.createTextNode(label));
+                 chooseCamSel.appendChild(option);
+             });
+             // Automatically select the first (potentially preferred) camera and update settings
+             if (chooseCamSel.options.length > 0) {
+                chooseCamSel.selectedIndex = 0;
+                SelectCam();
+             }
+          } else {
+              console.warn("No video input devices found.");
+              chooseCamSel.style.visibility = "hidden";
           }
-          else{
-              window.WEBCAM_SETTINGS.video.facingMode = 'user';
-              arCamera.setFlipped(true);
-          }
-          window.webcamStream = await navigator.mediaDevices.getUserMedia(window.WEBCAM_SETTINGS);
-          const video = document.querySelector("#webcam-video");
-          video.srcObject = webcamStream;
-          await arCamera.startWebcam(video);
+      } catch (err) {
+          console.error("Error enumerating devices:", err);
+          chooseCamSel.style.visibility = "hidden";
       }
-      async function IsCameraPermissionGranted() {
-          if (!navigator.permissions || !navigator.mediaDevices) {
-              console.log("Permissions API or mediaDevices not supported.");
-              return false;
-          }
-          try {
-              // Query the status of the camera permission
-              const permissionStatus = await navigator.permissions.query({ name: "camera" });
-              if (permissionStatus.state === "granted") {
-              console.log("Camera permission has already been granted.");
-              return true;
-              } else if (permissionStatus.state === "prompt") {
-              console.log("Camera permission is promptable.");
-              return false;
-              } else {
-              console.log("Camera permission has been denied.");
-              return false;
-              }
-          } catch (error) {
-              console.log("Error checking camera permission:", error);
-              return false;
-          }
+  }
+  function SelectCam(){
+      var selectedDeviceId = chooseCamSel.value;
+      var selectedLabel = chooseCamSel.options[chooseCamSel.selectedIndex]?.text || 'Selected Camera';
+      // Update WEBCAM_SETTINGS
+      // Use 'exact' constraint for deviceId. Clear facingMode to avoid conflicts.
+      window.WEBCAM_SETTINGS.video = {
+          ...(window.WEBCAM_SETTINGS.video || {}), // Keep existing settings like width/height
+          deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+          facingMode: undefined // Clear facingMode when specific device is chosen
+      };
+      console.log(`Selected Cam ID: ${selectedDeviceId}, Label: ${selectedLabel}`);
+      console.log("Updated WEBCAM_SETTINGS:", JSON.stringify(window.WEBCAM_SETTINGS));
+      if (window.iTracker) {
+           iTracker.WEBCAM_NAME = selectedLabel;
       }
-      function ShowError(error){
-          var errorDiv = document.getElementById("errorDiv");
-          errorDiv.style.opacity = 1;
-          errorDiv.style.visibility = "visible";
-          document.getElementById("errorText").innerHTML = error;
+      // If webcam is already running, potentially restart it with the new selection?
+      // This might be complex; usually selection happens before StartAR.
+      // If needed later: stop, update settings, start again.
+  }
+  async function FlipCam(){
+      console.log("FlipCam called");
+      if (!arCamera || !window.webcamStream) {
+          console.warn("Cannot flip camera, AR camera or stream not ready.");
+          return;
       }
-      function ShowScreenshot(dataUrl){
-          var screenshotDiv = document.getElementById("screenshotDiv");
+      arCamera.stopWebcam(); // Stop current stream first
+      window.webcamStream.getTracks().forEach(track => track.stop()); // Ensure tracks are stopped
+      window.webcamStream = null;
+      // Toggle facingMode preference
+		window.unityFacingMode = "environment"
+      // Update WEBCAM_SETTINGS for the *next* getUserMedia call
+      // Clear specific deviceId, set new facingMode
+      window.WEBCAM_SETTINGS.video = {
+         ...(window.WEBCAM_SETTINGS.video || {}),
+         deviceId: undefined, // Clear specific device ID
+         facingMode: window.unityFacingMode
+      };
+      // Update AR camera flip state based on new facing mode
+      arCamera.setFlipped(window.unityFacingMode === 'user');
+      console.log("Attempting to flip camera. New preferred facingMode:", window.unityFacingMode);
+      console.log("Updated WEBCAM_SETTINGS for next start:", JSON.stringify(window.WEBCAM_SETTINGS));
+      // Re-run the StartWebcam process which will now use the updated settings
+      await StartWebcam(); // This will call getUserMedia with the new facingMode
+  }
+  async function IsCameraPermissionGranted() {
+      // Best effort check using Permissions API
+      if (!navigator.permissions || !navigator.mediaDevices) {
+          console.warn("Permissions API or mediaDevices not supported. Cannot reliably check permission state beforehand.");
+          return false; // Assume prompt needed or denied
+      }
+      try {
+          const permissionStatus = await navigator.permissions.query({ name: "camera" });
+          console.log("Camera permission status query result:", permissionStatus.state);
+          return permissionStatus.state === "granted";
+      } catch (error) {
+          console.warn("Error checking camera permission (browser might not support query, e.g., Firefox):", error);
+          // Cannot determine state, assume false (prompt will happen anyway if needed)
+          return false;
+      }
+  }
+  // --- UI Management ---
+  function unityShowBanner(msg, type) {
+    // (Keep the original banner logic)
+    function updateBannerVisibility() {
+      warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+    }
+    var div = document.createElement('div');
+    div.innerHTML = msg;
+    warningBanner.appendChild(div);
+    if (type == 'error') div.style = 'background: red; padding: 10px; color: white;';
+    else {
+      if (type == 'warning') div.style = 'background: yellow; padding: 10px; color: black;';
+      setTimeout(function() {
+        warningBanner.removeChild(div);
+        updateBannerVisibility();
+      }, 5000);
+    }
+    updateBannerVisibility();
+  }
+  function ShowError(error){
+      console.error("Showing Error UI:", error);
+      var errorDiv = document.getElementById("errorDiv");
+      document.getElementById("errorText").innerHTML = error; // Use innerHTML for potential formatting
+      errorDiv.style.opacity = 1;
+      errorDiv.style.visibility = "visible";
+      // Hide loading bar if it was visible
+      if (loadingBar) loadingBar.style.display = 'none';
+      // Optionally hide other UI elements like the start button if error is fatal
+  }
+  function ShowScreenshot(dataUrl){
+      var screenshotDiv = document.getElementById("screenshotDiv");
+      var img = document.getElementById("screenshotImg");
+      img.onload = () => { // Adjust size after image loads
+          const aspectRatio = img.naturalWidth / img.naturalHeight;
+          const viewportWidth = window.innerWidth * 0.8; // 80vw
+          const viewportHeight = window.innerHeight * 0.8; // 80vh
+          if (viewportWidth / viewportHeight > aspectRatio) {
+              // Viewport is wider than image aspect ratio -> height is limiting factor
+              img.style.height = viewportHeight + 'px';
+              img.style.width = (viewportHeight * aspectRatio) + 'px';
+          } else {
+              // Viewport is taller or equal aspect ratio -> width is limiting factor
+              img.style.width = viewportWidth + 'px';
+              img.style.height = (viewportWidth / aspectRatio) + 'px';
+          }
           screenshotDiv.style.opacity = 1;
           screenshotDiv.style.visibility = "visible";
-          document.getElementById("screenshotImg").src = dataUrl;
-          document.getElementById("screenshotImg").style.width = "80vw";
-          document.getElementById("screenshotImg").style.height = 80 / window.innerWidth * window.innerHeight + "vw";
-      }
-      function HideScreenshot(){
-          var screenshotDiv = document.getElementById('screenshotDiv');
-          screenshotDiv.style.opacity = 0;
-          setTimeout(()=>{
-            screenshotDiv.style.visibility = 'hidden';
-          }, 500);
-      }
-      function ShowVideoPreview(videoURL) {
+      };
+      img.src = dataUrl; // Set src last
+  }
+  function HideScreenshot(){
+      var screenshotDiv = document.getElementById('screenshotDiv');
+      screenshotDiv.style.opacity = 0;
+      // Visibility handled by CSS rule
+  }
+  function ShowVideoPreview(videoURL) {
         //  var videoPreviewDiv = document.getElementById('videoPreviewDiv');
         //  videoPreviewDiv.style.opacity = 1;
         //  videoPreviewDiv.style.visibility = 'visible';
@@ -480,32 +581,69 @@
               document.getElementById('cameraButtonContainer').style.display = "block";
             }, 500);
       }
-      function ShowConfirmUrl(url){
-          var confirmUrlDiv = document.getElementById("confirmUrlDiv");
-          confirmUrlDiv.style.opacity = 1;
-          confirmUrlDiv.style.visibility = "visible";
-          window.newUrlString = url;
-          document.getElementById("confirmUrlText").innerText = "Are you sure you want to visit " + url + "?";                
-      }
-      function HideConfirmUrl(){
-          var confirmUrlDiv = document.getElementById("confirmUrlDiv");
-          confirmUrlDiv.style.opacity = 0;
-          setTimeout(()=>{
-            confirmUrlDiv.style.visibility = 'hidden';
-          }, 500);
-      }
-      window.ITRACKER_GLOBALS = {
-          //place global settings here
-          INTERNAL_SMOOTHFACTOR_POS: .075,
-      }
-      function downloadVideo() {
-     //   window.unityInstance.SendMessage('ARCamera', 'OnDownloadVideoButtonPressed');
-         
-        }
-        async function shareVideo() {
-        //  window.unityInstance.SendMessage('ARCamera', 'OnShareVideoButtonPressed');
-      }      
-    
-    </script>
+  function ShowConfirmUrl(url){
+      var confirmUrlDiv = document.getElementById("confirmUrlDiv");
+      window.newUrlString = url; // Store URL globally for the button click
+      // Sanitize URL display slightly for safety? Or display as is.
+      document.getElementById("confirmUrlText").innerText = "Are you sure you want to visit " + url + "?";
+      confirmUrlDiv.style.opacity = 1;
+      confirmUrlDiv.style.visibility = "visible";
+  }
+  function HideConfirmUrl(){
+      var confirmUrlDiv = document.getElementById("confirmUrlDiv");
+      confirmUrlDiv.style.opacity = 0;
+      // Visibility handled by CSS rule
+  }
+  // --- iTracker Globals (Example) ---
+  window.ITRACKER_GLOBALS = {
+      INTERNAL_SMOOTHFACTOR_POS: .075,
+      // Add other global settings for iTracker if needed
+  };
+  // --- Placeholder functions for video actions (might be handled by Zappar) ---
+  function downloadVideo() {
+       console.log("Download button clicked (Implementation likely in Zappar/sns_custom.js)");
+       // If not using Zappar's button, trigger download here:
+       // const link = document.createElement('a');
+       // link.href = document.getElementById('videoPreview').src;
+       // link.download = 'WeWorkSticker_video.mp4';
+       // document.body.appendChild(link);
+       // link.click();
+       // document.body.removeChild(link);
+   }
+   async function shareVideo() {
+       console.log("Share button clicked (Implementation likely in Zappar/sns_custom.js)");
+       // If not using Zappar's button, use Web Share API if available:
+       // const videoSrc = document.getElementById('videoPreview').src;
+       // try {
+       //     const response = await fetch(videoSrc);
+       //     const blob = await response.blob();
+       //     const file = new File([blob], "WeWorkSticker_video.mp4", { type: blob.type });
+       //     if (navigator.share && navigator.canShare({ files: [file] })) {
+       //         await navigator.share({
+       //             title: 'Check out my Video',
+       //             text: 'Recorded using FilterYouAR',
+       //             files: [file]
+       //         });
+       //         console.log('Successful share');
+       //     } else {
+       //         alert('Web Share API not supported or cannot share this file.');
+       //         // Fallback: prompt user to download?
+       //     }
+       // } catch (error) {
+       //     console.error('Error sharing', error);
+       //     alert('Sharing failed: ' + error.message);
+       // }
+   }
+  // --- Service Worker ---
+  window.addEventListener("load", function () {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("ServiceWorker.js")
+          .then(reg => console.log("Service Worker registered.", reg))
+          .catch(err => console.error("Service Worker registration failed:", err));
+    }
+    // Call initialize after page load and service worker registration attempt
+    initialize();
+  });
+</script>
     </body>
   </html>
