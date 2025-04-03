@@ -240,4 +240,35 @@ function restartWebcam() {
             console.error("Failed to restart webcam:", err);
         });
 }
- 
+
+function restartWebcam() {
+    const videoEl = document.getElementById("webcam-video");
+    if (!videoEl) return;
+
+    navigator.mediaDevices.getUserMedia({
+        video: {
+            facingMode: { ideal: "environment" } // Prefer rear camera
+        },
+        audio: false
+    })
+    .then(stream => {
+        const videoTrack = stream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
+
+        console.log("Camera label:", videoTrack.label);
+        console.log("Camera facing mode (if available):", settings.facingMode);
+
+        videoEl.srcObject = stream;
+        videoEl.play();
+
+        // Optional: warn user if wrong cam was selected
+        if (settings.facingMode && settings.facingMode === "user") {
+            alert("Front camera selected. Please switch to rear camera manually.");
+        }
+
+        console.log("Webcam restarted with preferred rear camera.");
+    })
+    .catch(err => {
+        console.error("Failed to restart webcam:", err);
+    });
+}
