@@ -23,6 +23,19 @@ function setupEventListeners() {
     }
 }
 
+
+// iOS detection and optimization
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+if (isIOS) {
+    console.log("iOS detected — enabling mobile-safe optimizations");
+    const canvas = document.querySelector("#unity-canvas");
+    if (canvas) {
+        canvas.width = window.innerWidth / 1.5;
+        canvas.height = window.innerHeight / 1.5;
+    }
+}
+
+
 window.addEventListener("load", function () {
     console.log("sns_custom.js: Page loaded! Initializing recorder");
     const canvas = document.querySelector("#unity-canvas");
@@ -155,6 +168,15 @@ function startRecording() {
 }
 
 function stopRecording() {
+// Clean up unused camera stream if needed
+const videoEl = document.getElementById("webcam-video");
+if (videoEl && videoEl.srcObject) {
+    const tracks = videoEl.srcObject.getTracks();
+    tracks.forEach(track => track.stop());
+    videoEl.srcObject = null;
+    restartWebcam();
+}
+
     if (recorder) {
         console.log("Stopping video recording without custom audio");
         recording = false;
@@ -201,4 +223,20 @@ function updateProgress() {
          }
 
     }
+}
+
+
+function restartWebcam() {
+    const videoEl = document.getElementById("webcam-video");
+    if (!videoEl) return;
+
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(stream => {
+            videoEl.srcObject = stream;
+            videoEl.play();
+            console.log("Webcam restarted");
+        })
+        .catch(err => {
+            console.error("Failed to restart webcam:", err);
+        });
 }
