@@ -240,3 +240,4 @@ function restartWebcam() {
             console.error("Failed to restart webcam:", err);
         });
 }
+ 
